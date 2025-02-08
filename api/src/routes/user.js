@@ -1,38 +1,37 @@
-const express = require("express");
-const { query, validationResult } = require("express-validator");
-const { PrismaClient } = require("@prisma/client");
+const express = require('express');
+const { query, validationResult } = require('express-validator');
+const connection = require('../db/connection');
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
-router.get("/users", async (req, res) => {
-    const users = await prisma.user.findMany({
-        include: {
-            posts: true,
-        },
+router.get('/users', (req, res) => {
+    connection.query('SELECT * FROM User', (error, results) => {
+        if (error) {
+            return res.status(500).json({ error: error.message });
+        }
+        res.json(results);
     });
-
-    res.send(users);
 });
 
 router.get(
-    "/users/search",
-    query("q").notEmpty(),
-    async (req, res) => {
+    '/users/search',
+    query('q').notEmpty(),
+    (req, res) => {
         const result = validationResult(req);
 
         if (result.isEmpty()) {
             const { q } = req.query;
 
-            const data = await prisma.user.findMany({
-                where: {
-                    name: {
-                        contains: String(q),
-                    },
-                },
-            });
-
-            res.json(data);
+            connection.query(
+                'SELECT * FROM User WHERE name LIKE ?',
+                [`%${q}%`],
+                (error, results) => {
+                    if (error) {
+                        return res.status(500).json({ error: error.message });
+                    }
+                    res.json(results);
+                }
+            );
         } else {
             res.status(400).json({ errors: result.array() });
         }
